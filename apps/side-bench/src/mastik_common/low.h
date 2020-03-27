@@ -729,6 +729,29 @@ static inline void  newTimeSlice(void){
 }
 
 /*return when a big jump of the time stamp counter is detected*/
+static inline void newTimeSlice2(uint32_t* ts){
+  asm("");
+  uint32_t best = 0;
+  uint32_t volatile  prev = rdtime();
+  for (;;) {
+    uint32_t volatile cur = rdtime();
+    /*if (cur - prev > best) {
+      best = cur - prev;
+      //printf("best = %d\n", best);
+    }*/
+    if (cur - prev > TS_THRESHOLD)
+    {
+      /* last time stamp of previous TS */
+      ts[0] = prev;
+      /* first time stamp of current TS */
+      ts[1] = cur;
+      return;
+    }
+    prev = cur;
+  }
+}
+
+/*return when a big jump of the time stamp counter is detected*/
 static inline void  newTimeTick(void){
   asm("");
   uint32_t volatile  prev = rdtime();

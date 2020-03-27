@@ -28,6 +28,7 @@ struct bench_l1 {
      total cost on probing L1 D/I cache*/
     uint32_t result[CONFIG_BENCH_DATA_POINTS];
     uint32_t sec[CONFIG_BENCH_DATA_POINTS];
+    uint32_t t_switch[CONFIG_BENCH_DATA_POINTS];
 #ifdef CONFIG_MANAGER_PMU_COUNTER 
     uint32_t pmu[CONFIG_BENCH_DATA_POINTS][BENCH_PMU_COUNTERS]; 
 #endif 

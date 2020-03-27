@@ -20,6 +20,7 @@ int l1_trojan(bench_env_t *env) {
     seL4_MessageInfo_t info;
 
     int secret = 0; 
+    int last = 0;
 
     bench_args_t *args = env->args; 
     
@@ -28,6 +29,9 @@ int l1_trojan(bench_env_t *env) {
     char *data = malloc(L1_PROBE_BUFFER);
     assert(data); 
     data = (char*)ALIGN_PAGE_SIZE(data);
+
+    /* [last time stamp of previous TS; first time stamp of current TS] */
+    uint32_t *ts = malloc(2*sizeof(uint32_t));
 
     uint32_t *share_vaddr = (uint32_t*)args->shared_vaddr; 
 
@@ -44,13 +48,14 @@ int l1_trojan(bench_env_t *env) {
         if (i % 1000 == 0) printf("Data point %d\n", i);
 
         /*waiting for a system tick*/
-        newTimeSlice();
+        newTimeSlice2(ts);
         secret = random() % (L1_SETS + 1);
 
-        l1d_data_access(data, secret);
+        //l1d_data_access(data, secret);
 
         /*update the secret read by low*/ 
-        *share_vaddr = secret; 
+        share_vaddr[0] = secret; 
+        share_vaddr[1] = ts[0];
 
     }
     while (1);
@@ -76,6 +81,11 @@ int l1_spy(bench_env_t *env) {
     l1info_t l1_1 = l1_prepare(monitored_mask);
     uint16_t *results = malloc(l1_nsets(l1_1)*sizeof(uint16_t));
 
+    /* [last time stamp of previous TS; first time stamp of current TS] */
+    uint32_t ts[2];
+
+    /* start of previous timeslice */
+    uint32_t prev_start = 0;
 
     /*the record address*/
     struct bench_l1 *r_addr = (struct bench_l1 *)args->record_vaddr;
@@ -89,13 +99,14 @@ int l1_spy(bench_env_t *env) {
 
     for (int i = 0; i < CONFIG_BENCH_DATA_POINTS; i++) {
 
-        newTimeSlice();
+        newTimeSlice2(ts);        
+        
 
 #ifdef CONFIG_MANAGER_PMU_COUNTER
         sel4bench_get_counters(BENCH_PMU_BITS, pmu_start);  
 #endif 
 
-        l1_probe(l1_1, results);
+        //l1_probe(l1_1, results);
 
 #ifdef CONFIG_MANAGER_PMU_COUNTER 
         sel4bench_get_counters(BENCH_PMU_BITS, pmu_end);
@@ -106,12 +117,15 @@ int l1_spy(bench_env_t *env) {
 #endif
         /*result is the total probing cost
           secret is updated by trojan in the previous system tick*/
-        r_addr->result[i] = 0; 
-        r_addr->sec[i] = *secret; 
+        r_addr->result[i] = 0;
+        r_addr->sec[i] = secret[0];
+        r_addr->t_switch[i] = prev_start - secret[1];
 
+        prev_start = ts[1];
+/*
         for (int j = 0; j < l1_nsets(l1_1); j++) 
             r_addr->result[i] += results[j];
-
+*/
     }
 
     /*send result to manager, spy is done*/

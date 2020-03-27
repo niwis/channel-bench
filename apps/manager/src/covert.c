@@ -158,6 +158,14 @@ int run_single_l1(m_env_t *env) {
     }
     printf("probing time end\n");
 
+    printf("context switch time start\n");
+    
+    for (int i = BENCH_TIMING_WARMUPS; i < CONFIG_BENCH_DATA_POINTS; i++) {
+        printf("%d %d\n", r_d->sec[i], r_d->t_switch[i]);
+
+    }
+    printf("context switch time end\n");
+
 #ifdef CONFIG_MANAGER_PMU_COUNTER 
     printf("enabled %d pmu counters\n", BENCH_PMU_COUNTERS);
     for (int counter = 0; counter < BENCH_PMU_COUNTERS; counter++) {
